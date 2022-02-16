@@ -152,10 +152,24 @@
     Extra： 是 EXPLAIN 输出中另外一个很重要的列，该列显示 MySQL 在查询过程中的一些详细信息，MySQL 查询优化器执行查询的过程中对查询计划的重要补充信息。
     
 ### 1.6 表关联
-    
+  + 关联查询：关联数据结构相同的数据表  
+  UION：去重重复行
+  UION ALL：保留所有行
+    ```
+    SELECT cust_name, cust_contact, cust_email
+    FROM Customers
+    WHERE cust_state IN ('IL','IN','MI')
+    UNION
+    SELECT cust_name, cust_contact, cust_email
+    FROM Customers
+    ```
+  + 内连接：将两个表都满足条件的行所有列组合起来  
+  SELECT 列名表 FROM 表名1 [INNER可以省略] JOIN 表名2 ON或WHERE 条件表达式
+  + 左连接（LEFT JOIN）：以左表为基础，按照连接条件将右表相关数据和左表组合，右表无法关联的数据，左表补充null
+  + 右连接（RIGHT JOIN）：以右表为基础，按照连接条件将左表相关数据和右表组合，左表无法关联的数据，右表补充null
 ### 1.7 SQL语句
   + 创建表：
-    ```angular2
+    ```
     CREATE TABLE IF NOT EXISTS `runoob_tbl`(
     `runoob_id` INT UNSIGNED AUTO_INCREMENT,
     `runoob_title` VARCHAR(100) NOT NULL,
@@ -447,3 +461,278 @@
   Segment文件命名的规则：partition全局的第一个segment从0（20个0）开始，后续的每一个segment文件名是上一个segment文件中最后一条消息的offset值。
   段文件包含索引（*.index）和数据文件（*.log），索引文件保存消息在数据文件中编号（第几条），编号不一定连续，因为没必要为每条数据都建立索引，隔一定量数据建立避免索引太大。
   如：*.index：1，0 表在数据文件中从上倒下第一条消息，0表示消息的物理偏移地址（前面所有消息总长度）。
+# 网络协议
+## 1. 网络基础  
+
+  | OSI分层 | 简介 | TCP/IP | 五层 |
+  | ---- | ---- | ---- | ---- |
+  | 应用层 | 封装好的应用服务，ssh,ftp,smtp,dns | 应用层 | 应用层 |
+  | 表示层 | 不同系统通信，传输时数据处理及接收后处理，如加密解密、压缩解压缩等 | 应用层 | 应用层 | 
+  | 会话层 | 数据传输到电脑，多个程序通过端口区分，将数据从一个端口传输到另一台台电脑指定的端口。 | 应用层 | 应用层 |  
+  | 传输层 | 怎么传，确保整个数据传输正确，可靠性。协议：TCP、UDP、SPX等。 | 传输层 | 传输层 | 
+  | 网络层 | 多台设备通信，传输给谁。协议：IP、IPX、RIP、OSPF等。 | 网络层 | 网络层 | 
+  | 数据链路层 | 输出传输格式定义，传输帧，纠错。协议：SDLC、HDLC、PPP、STP、帧中继等。 | 网络接口层 | 数据链路层 |
+  | 物理层 | 定义物理设备接口，网线接口类型，传输速率等，传输数据为比特。（8bite=1B=1字节） | 网络接口层 | 物理层 |
+## 2. TCP/UDP  
+  UDP：无连接;不可靠;效率高;多对多:视频会议等场景  
+  TCP：需要建立连接;可靠;只能一对一:文件传输等场景  
+  三次握手：
+  1. 客户端发送SYN报文，请求建链。SYN报文：flag中SYN标识为1，随机产生一个序列号，seq=X
+  2. 服务端收到SYN后，发送SYN+ACK报文：flag中SYN和ACk标识为1，ack=X+1,随机产生序列号，seq=Y
+  3. 客户端收到回复后，发送确认包ACK：flag中ACK标识为1，ack=Y+1 
+  
+  四次挥手：由于全双工，需要两边都确认断链  
+  1. 客户端发送FIN报文,表示数据发送完成，请求断链：flag中FIN标识为1
+  2. 服务端收到后发送ACK报文关闭本端，
+  3. 服务端数据发送完成后，发送FIN报文
+  4. 客户端收到后发送ACk报文，等待2*MSL,没有收到回复表示服务端已经关闭，则客户端关闭
+## 3. http
+  + 请求方法：
+  
+      | 方法 | 描述 |
+      | ---- | ---- | 
+      | GET | 获取资源 |
+      | HEAD | 获取报文首部 |
+      | POST | 传输数据 |
+      | PUT | 上传文件或者修改资源 |
+      | PATCH | 修改部分数据 |
+      | DELETE | 删除资源 |
+     GET和POST区别：
+     1. GET数据一般在url中，POST一般数据放在body中，GET参数会暴露在地址栏
+     2. 收到URL长度限制，传输数据大小一般不同
+     3. POST相对安全，URL可能在历史记录被别人看到，GET可能导致跨站攻击
+     4. 请求效率不同，GET三次握手直接发送数据，POST握手完先发请求头，服务器返回100后才开始发送数据。
+  + 状态码
+  
+      | 状态码 | 描述 |
+      | ---- | ---- | 
+      | 100 Continue | 正常，客户端可以继续发送请求或者忽略这个响应 |
+      | 200 OK | 正常 |
+      | 204 No Content  | 请求已经处理，但是响应只有头。一般用于客户端发送服务端消息，不需要服务端返回 |
+      | 301 Moved Permanently  | 永久重定向 |
+      | 302 Found  | 临时重定向 |
+      | 400 Bad Request | 请求报文中存在语法错误 |
+      | 401 Unauthorized | 未认证通过 |
+      | 403 Forbidden | 请求被拒绝 |
+      | 404 Not Found | 未找到资源 |
+      | 500 Internal Server Error | 服务器正在执行请求时发生错误 |
+      | 503 Service Unavailable | 服务器停机等，无法处理请求 |
+  + 请求头字段
+    1. 通用字段
+    
+        | 字段 | 说明 |
+        | ---- | ---- | 
+        | Date | 报文创建时间，Tue, 15 Feb 2022 07:22:18 GMT |
+        | Connection | 管理持久连接 |
+        | Transfer-Encoding	 | 报文主体的传输编码方式，chunked |
+    2. 请求首部
+    
+        | 字段 | 说明 |
+        | ---- | ---- | 
+        | Accept | 可处理的数据类型，application/json, text/plain, */* |
+        | Accept-Encoding | 优先的内容编码，gzip, deflate, br |
+        | Accept-Language	 | 优先的语言，h-CN,zh;q=0.9 |
+        | Host	 | 请求资源所在服务器，10.10.190.10 |
+        | Referer	 | 对请求中URI的原始获取方，从哪跳过来的 |
+        | User-Agent	 | 客户端程序的信息，Mozilla/5.0 (Windows NT 10.0; Win64; x64) |
+    3. 响应首部
+    
+        | 字段 | 说明 |
+        | ---- | ---- | 
+        | Accept-Ranges | 是否接受字节范围请求， |
+        | Age | 推算资源创建经过时间 |
+        | Server | HTTP 服务器的安装信息，nginx |
+  + cookie、session和token  
+    1. cookie:浏览器的一种功能，cookie能帮助web站点保存信息。服务端设置，客户端每次请求会带着服务器保存的cookie,其中包括了key,value,过期时间,路径和域。
+    2. session：一种服务端的机制，如果只用服务端给客户端分配一个ID，保存在cookie中来区分用户是否登录或者有权限，就很容易被伪造cookie。服务端一般会保存用户数据，每一个用户数据有个对应的key，把这个key放在客户端cookie中。客户端携带cookie访问，服务端会用cookie中的值去查找保存在服务中的用户数据判断用户信息。比较安全。
+    3. token：由于使用session服务端要保存用户会话信息，如果用户量大，服务端压力大。可以将用户信息在服务端加密返回，用户拿到后每次请求带上token参数，服务端直接解密校验token就可以获得用户数据。
+  + CSRF（跨站点请求伪造）：
+    1. 原理
+        ```
+           1. 用户C打开浏览器，访问受信任网站A，输入用户名和密码请求登录网站A；
+           2. 在用户信息通过验证后，网站A产生Cookie信息并返回给浏览器，此时用户登录网站A成功，可以正常发送请求到网站A；
+           3. 用户未退出网站A之前，在同一浏览器中，打开一个TAB页访问网站B；
+           4. 网站B接收到用户请求后，返回一些攻击性代码(包含一个访问第三方网站A的请求)；
+           5. 用户C就在自己不知情的情况下，被偷偷请求了A网站（上次自己登录的Cookie还未过期）
+        ```
+    2. 防御
+        ```
+           1. 验证Reffer，判断用户是从那个网站跳过来的，
+           2. 使用token，因为token是不存在Cookie中无法自动携带
+        ```
+    3. 前后端分离怎么解决CSRF：浏览器才会产生，因为浏览器访问的页面是80或者443，后端端口比如是8080，所以在页面中请求后端API会产生跨域问题  
+      nginx中配置：   
+          add_header 'Access-Control-Allow-Origin' '*'; //允许的请求源
+          add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS'; //允许的请求方式
+          add_header 'Access-Control-Allow-Headers' //允许的请求头
+  + url请求过程
+    1. DNS域名解析获取IP：浏览器缓存 -> 系统缓存 -> hosts文件 -> 本地DNS服务器缓存
+    2. 三次握手进行连接
+    3. 使用http协议发送数据
+    4. web服务收到请求后处理数据并返回
+    5. 浏览器拿到数据后渲染页面
+    6. 浏览器关闭TCP连接
+## 4. https加密
+  + 为什么有HTTPS，因为http不安全，安全就是传输过程中只有客户端和服务端可以看到通信内容。
+    1. 对称加密：数据加密发送，服务端解密，但是一般多个客户端和一个服务端通信，如果服务器端对所有的客户端通信都使用同样的对称加密算法，无异于没有加密。
+    2. 非对称加密：公钥加密只有对应私钥才能解，私钥加密只有对应公钥才能解。服务器将 公钥发给所有客户端，服务器发送消息使用私钥加密后发送，客户端有公钥可以解密数据。
+    3. 加密算法确定：为了保证不同客户端使用不同加密算法，通信使用随机数来确定，所以只有交互时才能确定加密算法。
+    4. 公钥传输掉包：客户端怎么获取服务器的公钥，客户端没法保存所有网站的公钥，只能每次请求前去服务端请求。如果A去请求C获取公钥，被中间B拦截，B将自己的公钥发送给A，A每次发送数据使用B的公钥加密发送，B收到后使用自己私钥解密，再用C公钥加密（可以篡改数据）发送给C，C返回数据给B，B再返回给A，A和C都不知道自己通信数据已经泄密。主要由于客户端无法区分返回公钥的是服务器还是中间人。
+    5. 数字证书：服务器让第三方机构管理公钥，第三方机构用自己的私钥加密公钥和服务器相关信息，加密后的信息称为数字证书。客户端将数字证书发给服务端，服务端本地存储好第三方机构的公钥，使用该公钥解密数字证书，可以解密就说明没有被掉包。
+    6. 数字签名：如果A去请求服务器证书，B同样有第三方公钥，可以拦截修改公钥。所有需要数字签名，第三方机构制作证书时，将所有服务器信息和公钥计算出摘要（MD5或者hash码），然后再用自己的私钥加密摘要生成一个签名，和证书一起颁发给服务器。即使中间B截获了证书并解密，但是无法修改其内容，因为修改后要用私钥加密摘要生成签名，B是没有第三方机构的私钥，所有保证了证书不被篡改。
+  + SSL/TLS协议: https中加密信息，就是上述流程
+    1. 客户发起请求时，除了说明自己支持的非对称加密算法，还会附加一个客户端随机数。
+    2. 服务器回复请求时，会确定非对称加密算法和哈希函数，并附上公钥。此外，服务器端还会在此次通信中附加一个服务器端随机数
+    3. 客户端会产生第三个随机数(Premaster secret)，客户端验证公钥，获取服务端发送的信息，然后利用服务器确定的非对称加密算法和公钥来加密这个随机数，再发送给服务器端。
+    4. 服务端用私钥解密第三个随机数
+    5. 客户端和服务器端都知道了三个随机数。双方各自用商量好的哈希函数从三个随机数获得对称加密的密钥。
+# 开发工具
+## 1. git
+  + 四个部分：
+    + 工作区：开发修改都在工作区，工作区的修改执行add 命令可以提交到暂存区
+    + 暂存区：暂存区的修改可以commit到本地仓库，也可以checkout到工作区
+    + 本地仓库：可以push到远端仓库，也可以reset还原到暂存区
+    + 远端仓库：可以pull远程修改到本地仓库，也可以clone远端仓库到本地仓库
+  + 基本命令：
+    + 添加修改提交
+        ```
+        git init   #建立一个本地仓库
+        git add 文件1 文件2   #将工作区文件添加到暂存区
+        git add -u #添加所有被tracked文件（git status可以看到）的修改删除到暂存区，不包含untracked文件
+        git add -A #添加所有被tracked文件（git status可以看到）的修改删除到暂存区，包含untracked文件
+        git add . #将当前工作区所有文件添加到暂存区
+        git add -i #进入交互界面，按需添加文件到暂存区
+        git commit [-a] -m "提交说明" #将暂存区[跳过暂存区，将工作区直接]内容提交到本地仓库
+        git commit --amend -m "提交说明" #修改最近一次的提交信息，会将最后一次提交记录替换
+        git commit --amend --no-edit #在最后一次提交记录中再提交修改，不修改message不产生提交记录
+        git push -u origin master #提交master到远程 
+        ```
+    + 查看
+        ```
+        git status #查看仓库状态
+        git diff #工作区和暂存区差异
+        git diff 分支名 #工作区和该分支差别，远端分支：remote/origin/分支名
+        git diff HEAD #工作区与HEAD指向的内容差异
+        git diff 提交id 文件名 #工作区某文件和某次历史版本该文件差别
+        git diff 版本tag #从某个版本后都修改了啥
+        git diff 分支1 分支2 #比较两个分支差别
+        git log #查看所有提交记录
+        git log -p -n #查看最近n提交记录
+        git log filename #查看某个文件的提交记录
+        ```
+    + 回滚撤销
+        ```
+        git reset HEAD^ #恢复到上次提交的版本
+        git reset HEAD^^ #恢复到上上次提交的版本，或者~n，恢复到前n次
+        git reset --hard commit号 #恢复到指定版本
+        git revert HEAD #撤销最近一次提交
+        git revert commit号 #撤销某次commit
+        ```    
+    + 分支
+        ```
+        git reset HEAD^ #恢复到上次提交的版本
+        git reset HEAD^^ #恢复到上上次提交的版本，或者~n，恢复到前n次
+        git reset --hard commit号 #恢复到指定版本
+        git revert HEAD #撤销最近一次提交
+        git revert commit号 #撤销某次commit
+        ```
+    + merge和rebase：
+       + rebase：变基，在当前分支rebase开发分支，相当于把当前分支的修改依次放在了开发分支后面，整个开发分支是一条线；但是rebase后没法追踪是从按个提交拉出来的
+       + merge：合并，在开发分支merge自己分支，相当于将开发分支的修改和自己的修改再生成一次commit记录，然后让开发分支指向最新的这个提交
+## 2. docker
+  + 基础：
+    + 镜像：就是一个装有软件的环境，启动后就可以使用
+    
+        | 命令 | 说明 |
+        | ---- | ---- | 
+        | docker images | 查看本机docker中所有镜像 |
+        | docker search mysql | 在远端dockerhub仓库搜索镜像 |
+        | docker pull mysql | 将远端仓库mysql拉去到本地 |
+        | docker rmi mysql | 删除本地mysql镜像 |
+        | docker save > 文件名 镜像ID | 导出指定镜像 |
+        | docker load < 文件名 | 导入镜像 |
+    + 容器：运行镜像并提供服务
+    
+        | 命令 | 说明 |
+        | ---- | ---- | 
+        | docker run -it 镜像ID/镜像名 /bin/bash | 启动一个容器并打卡一个终端允许交互 |
+        | docker ps | 查看容器 |
+        | docker stop/start/restart 容器ID | 停止/启动/重启一个容器 |
+        | docker exec -it 容器ID /bin/bash| 进入容器交互 |
+        | docker rm [-f] 容器ID | 删除[强制]容器 |
+        | docker logs 容器ID | 查询容器日志 |
+        | docker load < 文件名 | 导入镜像 |
+    + dockerfile：用来构建docke镜像的文件
+
+        | 命令 | 说明 |
+        | ---- | ---- | 
+        | FROM | 基础镜像 |
+        | RUN | 构建镜像时执行的命令 |
+        | CMD | 运行容器时执行的命令 |
+        | VOLUME | 指定容器挂载点到宿主机自动生成的目录或其他容器 |
+        | USER | 为RUN、CMD、和 ENTRYPOINT 执行命令指定运行用户 |
+        | EXPOSE | 声明容器的服务端口（仅仅是声明） |
+        | ENV | 设置容器环境变量 | 
+        | ADD | 拷贝文件或目录到容器中，如果是URL或压缩包便会自动下载或自动解压 | 
+        | COPY | 拷贝文件或目录到容器中，跟ADD类似，但不具备自动下载或解压的功能 | 
+        ```
+        docker build -t test:10.1 . #使用当前目录的Dockerfile 文件生成镜像
+        docker save ubuntu:latest |gzip filename #保存镜像为zip文件
+        docker load -i  filename # 导入镜像
+        docker run  -v $PWD/myapp:/usr/src/myapp  -w /usr/src/myapp python:3.5 python helloworld.py  
+        -v $PWD/myapp:/usr/src/myapp :将主机中当前目录下的myapp挂载到容器的/usr/src/myapp
+        -w /usr/src/myapp :指定容器的/usr/src/myapp目录为工作目录
+        python helloworld.py :使用容器的python命令来执行工作目录中的helloworld.py文件
+        ```
+    + docker-compose:批量管理容器，docker-compose.yml 定义构成应用程序的服务
+        ```
+        # docker-compose.yml
+        version: '3'  // 指定本 yml 依从的 compose 哪个版本制定的。
+        services:
+          es:  //服务
+            container_name: es  //容器名称
+            image: es  //使用的镜像名
+            environment:  //容器环境变量设置
+              - "ES_JAVA_OPTS=-Xms32G -Xmx32G"
+              - cluster.name=aisa_es_cluster
+              - bootstrap.memory_lock=true
+              - xpack.security.transport.ssl.enabled=true
+              - xpack.security.enabled=true
+              - ELASTIC_USERNAME=elastic
+              - ELASTIC_PASSWORD=123
+            ulimits:  //资源限制
+              memlock:
+                soft: -1
+                hard: -1
+              nofile:
+                soft: 655360
+                hard: 655360
+            volumes:  //目录挂在
+              - /data/es:/usr/share/elasticsearch/data
+              - /opt/work/nta/lib/log4j-core-2.11.1.jar:/usr/share/elasticsearch/lib/log4j-core-2.11.1.jar
+            networks:  //网络配置
+              - net
+            ports:  //端口映射
+              - "127.0.0.1:9200:9200"
+            tty: true //运行容器内部建立shell
+            stdin_open: true
+            restart: always //支持restart
+        networks:
+          net:
+            driver: bridge 
+        ```    
+## 3. nginx
+
+# 数据结构和算法
+## 1. 数据结构
+## 2. 常用算法
+
+# Linux系统
+## 1. 常用命令
+## 2. 启动流程
+## 3. IO模型
+
+# 开发框架
+## 1. flask
+## 2. django
+## 3. spring boot
