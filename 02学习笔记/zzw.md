@@ -722,6 +722,97 @@
             driver: bridge 
         ```    
 ## 3. nginx
+  1. 特点：低内存、高可靠性、高可扩展、高并发（50000）、单master多works模式支持热部署
+  2. 场景：静态文件服务器、反向代理、负载均衡
+  3. 常用命令：
+      ```
+      nginx -t   # 检查配置语法
+      nginx # 启动
+      nginx -s reload # 重启
+      nginx -s stop # 停止
+      nginx -c 文件 # 使用指定文件启动nginx
+      ```
+  4. 配置解析
+      ```
+      user nginx;   # 运行的用户，可以不设置默认nginx
+      worker_processes auto; # work进程数量，一般和cpu核数一致
+      error_log /var/log/nginx/error.log; # 错误日志路径
+      pid /run/nginx.pid; # 进程pid保存路径
+        
+      include /usr/share/nginx/modules/*.conf; # 导入其他地方的配置
+        
+      events {
+          worker_connections 1024; # 单个work进程最大并发数
+          #use epoll;      #事件驱动模型，select|poll|kqueue|epoll|resig|/dev/poll|eventport
+          multi_accept on;  #设置一个进程是否同时接受多个网络连接，默认为off
+      }
+        
+      http {
+          log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                              '$status $body_bytes_sent "$http_referer" '
+                              '"$http_user_agent" "$http_x_forwarded_for"';  # 自定义日志格式
+        
+          access_log  /var/log/nginx/access.log  main;  # 使用自定义个的日志格式
+        
+          sendfile            on; #允许sendfile方式传输文件，默认为off，可以在http块，server块，location块。
+          tcp_nopush          on; #有数据就发
+          tcp_nodelay         on; #缓存一部分一起发
+          keepalive_timeout   65; #tcp连接结束后，保留连接65s，下次连接就不用重新建立了
+          types_hash_max_size 2048; #该参数指定了存储MIME type与文件扩展名的散列的最大大小，该值越大，散列的key就越稀疏，检索速度越快，但是会占用更多的内存；该值越小，占用的内存越小，但是冲突率就会上升，检索越慢。
+        
+          server_tokens off;  # 返回错误页面时是否在Server头部中返回具体的nginx版本
+        
+          include             /etc/nginx/mime.types; #文件扩展名和类型映射表
+          default_type        application/octet-stream; #默认的文件类型
+
+          include /etc/nginx/conf.d/*.conf; #包含的子配置项的位置和文件,子配置文件可以只包含下面一部分
+        
+          server{
+            listen 443 ssl;  #配置监听端口，开启ssl协议
+            server_name 0.0.0.0; //配置域名
+        
+            root /opt/static; #服务默认启动目录
+            index index.html; #默认访问文件
+            client_max_body_size 1024M; #用户上传数据大小限制
+            set $outdated N;  
+        
+            ssl_protocols TLSv1.2; #协议版本
+            ssl_certificate "/etc/nginx/ssl/aisa/server.crt"; 证书路径，包含公钥
+            ssl_certificate_key "/etc/nginx/ssl/aisa/server.key"; 私钥路径
+            ssl_session_cache shared:SSL:1m; #储存SSL会话的缓存类型和大小
+            ssl_session_timeout  10m; #会话过期时间
+            ssl_ciphers HIGH:!aNULL:!MD5; #选择的加密套件，前面叹号的是废弃的
+            ssl_prefer_server_ciphers on; #设置协商加密算法时，优先使用我们服务端的加密套件，而不是客户端浏览器的加密套件
+        
+            gzip on; #开启gzip压缩模式
+            gzip_types application/x-javascript text/css application/javascript text/javascript text/plain text/xml application/json application/vnd.ms-fontobject application/x-font-opentype application/x-font-truetype application/x-font-ttf application/xml font/eot font/opentype font/otf image/svg+xml image/vnd.microsoft.icon;
+        
+            access_log  /var/log/nginx/web_access.log;
+            error_log  /var/log/nginx/web_error.log;
+            
+            upstream servers{
+            # 配置负载均衡服务器
+            server 1.1.1.1 weight=10
+            server 1.1.1.2 weight=20
+            }
+            
+            location /api { #匹配请求
+              proxy_pass http://servers:8888; 转发到负载均衡配置中的服务器
+              proxy_set_header Host $host;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Real-IP $remote_addr;
+            }
+          }
+        }
+
+      ```
+  5. 负载均衡对比
+  
+  | 工具 | 优点 | 缺点 |
+  | ---- | ---- | ---- |
+  | nginx | 简单；7层可以针对http应用做分流策略；高负载稳定；静态文件服务器 | 只支持http、https和email协议；对后端服务器只能通过端口健康检查 |
+  | lvs | 负载能力强；在4层资源消耗低；应用范围广支持协议多；相当于一个请求过来，只修改目的ip端口 | 不能动静分离；只能基于端口转发，不能基于url等转发 |
+  | haproxy | 负载均衡策略多；支持session保持；支持通过指定url检查后端服务状态 | 修改配置需要重启进程，不支持http cache；不支持pop/smtp |
 
 # 数据结构和算法
 ## 1. 数据结构
