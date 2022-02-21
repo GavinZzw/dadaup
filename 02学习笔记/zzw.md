@@ -1130,8 +1130,161 @@
         quick_sort(src_l, start, l - 1)
         quick_sort(src_l, l + 1, end)
     ```    
+  + 链表操作
+    + 链表反转：
+    ```
+    def reverse(root):
+        pre = None
+        while root:
+            tmp = root.next
+            root.next = pre
+            pre = root
+            root = tmp
+        return pre
+    ```
+    + 链表重排：
+    ```
+    给定head链表1->2->3->4->5, 重新排列为 1->5->2->4->3
+    class Solution:
+    def reverse(self, root):
+        pre = None
+        while root:
+            tmp = root.next
+            root.next = pre
+            pre = root
+            root = tmp
+        return pre
 
+    def reorderList(self, head):
+
+        if not head or not head.next:
+            return head
+        # 快慢指针，将链表分为两半
+        slow_head = head
+        fast_head = head
+        while fast_head and fast_head.next:
+            fast_head = fast_head.next.next
+            slow_head = slow_head.next
+
+        # 后半段链表
+        last_haed = slow_head.next
+        slow_head.next = None
+        # 反转后半段链表
+        last_haed = self.reverse(last_haed)
+
+        # 合并链表
+        left_head = head
+        while left_head and last_haed:
+            tmp_left = left_head.next
+            tmp_right = last_haed.next
+            left_head.next = last_haed
+            last_haed.next = tmp_left
+            left_head = tmp_left
+            last_haed = tmp_right
+        return head
+    ``` 
+    + 合并有序链表：
+    ```
+    给定head链表1->2->3,4->5->6 合并为为 1->2->3->4->5->6
+
+    ```
+  + 二叉树
+    + 前序遍历：
+    ```
+    
+
+    ```
+    + 根节点到叶子节点最大路径：
+    ```
+    
+
+    ``` 
 # 开发框架
 ## 1. flask
++ 项目结构
+    ```
+    |-flasky  
+        |-app/
+            |-templates/ 
+            |-static/
+            |-main/
+                |-__init__.py
+                |-common/
+                |-controllers/
+                |-exception/
+                |-service/
+            |-__init__.py
+            |-scripts/
+            |-email.py
+            |-models.py
+    |-migrations/
+    |-tests/
+        |-__init__.py
+        |-test*.py
+    |-venv/
+    |-requirements.txt
+    |-config.py
+    |-manage.py  #启动程序
+    ```
+    common:常用公共函数  
+    controllers：主要是视图路由过来解析处理并返回合适结果。
+    ```
+    *controller.py
+    
+    from flask import Blueprint, Response
+    blueprint = Blueprint('auto', __name__, url_prefix="/api") #定义蓝图
+    ExceptionHandler(blueprint).handler()  #注册异常处理
+    
+    // 视图函数
+    @blueprint.route("/auto/index", methods=["GET"])
+    @login_required
+    def index():
+        return Response("hello world", mimetype='application/json')
+    ```
+    exception：定义异常处理，blueprint.register_error_handler(异常类型，处理函数)。  
+    service：业务实现代码，主要供controller调用。  
+    scripts：保存一些脚本。  
+    models：定义数据库类。  
+    config：配置类，保存一些配置项。  
+    app/__init__.py:一般在该文件中使用工厂方法创建实例，并初始化一些配置。
+    ```
+    app/__init__.py
+    
+    from flask import Flask
+    from flask.ext.sqlalchemy import SQLAlchemy
+    from config import config
+    
+    db = SQLAlchemy()
+    def create_app(config_name):
+        app = Flask(__name__)
+        app.config.from_object(config[config_name])
+        config[config_name].init_app(app)
+        db.init_app(app)
+        
+        # 配置日志等
+        # 附加路由
+        from .main import main as main_blueprint
+        app.register_blueprint(main_blueprint)
+        
+        return app
+    ```           
+    manage：启动类。  
+    ```
+    import os
+    from app import create_app, db
+    from app.models import *
+    from flask_script import Manager
+    app = create_app(os.getenv('FLASK_CONFIG') or 'default')
+    manager = Manager(app)
+
+    if __name__ == '__main__':
+        manager.run()
+    ```    
++ 上下文全局变量:
++ 蓝图
++ session配置
++ 请求钩子
++ 数据库设置
++ SQLAlchemy
 ## 2. django
 ## 3. spring boot
