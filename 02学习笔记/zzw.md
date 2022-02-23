@@ -1186,19 +1186,90 @@
     + 合并有序链表：
     ```
     给定head链表1->2->3,4->5->6 合并为为 1->2->3->4->5->6
+    def Merge(self, pHead1: ListNode, pHead2: ListNode) -> ListNode:
 
+    head = p = ListNode(None)
+    while pHead1 and pHead2:
+        if pHead1.val <= pHead2.val:
+            p.next = pHead1
+            pHead1 = pHead1.next
+        else:
+            p.next = pHead2
+            pHead2 = pHead2.next
+        p = p.next
+    if pHead1:
+        p.next = pHead1
+    if pHead2:
+        p.next = pHead2
+    return head
     ```
   + 二叉树
     + 前序遍历：
     ```
-    
+    def pre_print(tree_node):
+        if not tree_node:
+            return
+        print(tree_node.val)
+        pre_print(tree_node.left)
+        pre_print(tree_node.right)
 
     ```
-    + 根节点到叶子节点最大路径：
+    + 根节点到叶子节点路径和为某值：
     ```
+    class Solution:
+        def __init__(self):
+            self.ret = []
     
-
+        def FindPath(self, root: TreeNode, target: int):
+    
+            if not root:
+                return self.ret
+    
+            def find(node, n, tmp):
+                if not node.left and not node.right:
+                    if node.val == n:
+                        tmp.append(node.val)
+                        self.ret.append(tmp)
+                        return
+                tmp.append(node.val)
+                if node.left:
+                    find(node.left, n - node.val, tmp.copy())
+                if node.right:
+                    find(node.right, n - node.val, tmp.copy())
+    
+            find(root, target, [])
+            return self.ret
     ``` 
+    + 二叉树最大路径和：可以从子节点经过父节点到子节点，但是一个节点只能路过一次
+    ```
+         -20
+        8   20
+           15  6
+     最大路径是：15->20->6=41
+     
+    class Solution:
+        def __init__(self):
+            self.ret = None
+    
+        def MaxPath(self, root):
+            def get_path_num(node):
+                l, r = 0, 0
+                if node.left:
+                    l = max(get_path_num(node.left), l)
+                if node.right:
+                    r = max(get_path_num(node.right), r)
+                curl_val = node.val + l + r
+                if not self.ret:
+                    self.ret = curl_val
+                else:
+                    self.ret = max(self.ret, curl_val)
+                return node.val + max(l, r)
+    
+            if not root:
+                return 0
+            get_path_num(root)
+            return self.ret
+    ```
 # 开发框架
 ## 1. flask
 + 项目结构
@@ -1280,11 +1351,75 @@
     if __name__ == '__main__':
         manager.run()
     ```    
-+ 上下文全局变量:
-+ 蓝图
-+ session配置
-+ 请求钩子
-+ 数据库设置
-+ SQLAlchemy
++ 上下文全局变量:  
+    LocalStack是flask实现的线程隔离栈，LocalProxy是从LocalStack中获取对象，同一个线程只能获取该线程保存的数据。
+    + current_app（app上下文，保存在_app_ctx_stack）：当前激活程序的程序实例,用于获取当前APP的一些配置信息等.当前程序实例还在运行，都不会失效。
+    + g（app上下文,保存在_app_ctx_stack）：应用上下文上的对象。处理请求时用作临时存储的对象，一般保存用户信息.一次请求期间，当请求处理完成后，生命周期也就完结了
+    + request（请求上下文，保存在_request_ctx_stack）：一般用来保存一些请求的变量。比如method、args、form等。一次请求期间，当请求处理完成后，生命周期也就完结了
+    + session（请求上下文，保存在_request_ctx_stack）：一般用来保存一些会话信息。只要它还未失效（用户未关闭浏览器、没有超过设定的失效时间），那么不同的请求会共用同样的session。
++ 蓝图:
+  + 作用：类似django中app,可以将项目通过蓝图分为几个模块分别管理路由等
+  + 创建：
+    ```
+    from flask import Blueprint
+    blueprint = Blueprint('auto', __name__, url_prefix="/api") #定义蓝图
+    // 视图函数注册路由
+    @blueprint.route("/auto/index", methods=["GET"])
+    @login_required
+    def index():
+        return Response("hello world", mimetype='application/json')
+    
+    //flask 实例中注册路由    
+    app.register_blueprint(blueprint)
+    ```   
++ session配置：
+  + 第三方扩展的session可以将信息存储在服务器，浏览器只保存sessionid
+  + flask请求上下文session是将信息加密后保存在浏览器cookie中：
+    1. session操作和字典一样：session['username']="aaa"
+    2. session的有效期:app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hour=2);SECRET_KEY来设置加密密钥
++ 请求钩子：通过装饰器实现的
+  + before_first_request:在处理第一个请求前运行
+  + before_request:在每次请求前运行
+  + after_request(response):如果没有未处理的异常抛出，在每次请求后运行
+  + teardown_request(response):在每次请求后运行，即使有未处理的异常
++ SQLAlchemy:
+  + 配置
+  
+  | 参数 | 说明 |
+  | ---- | ---- |
+  | SQLALCHEMY_DATABASE_URI | "sqlite:///data/test.db":连接数据库的URI |
+  | SQLALCHEMY_POOL_SIZE | 连接池的大小 |
+  | SQLALCHEMY_POOL_TIMEOUT | 连接池的超时时间 |
+  | SQLALCHEMY_POOL_RECYCLE | 自动回收连接的秒数 |
+  | SQLALCHEMY_MAX_OVERFLOW | 控制连接池达到最大大小后还可以创建的连接数 |
+  + falsk中操作
+  ```
+    table1 = Table(name='zx',age=13) # 创建
+    session.add(table1) #添加
+    
+    table = Table.query.get(1) #修改
+    table.name = '小李'
+    
+    table = Table.query.get(2) #删除
+    session.delete(table)
+  ```
+  查询：
+  
+  | 参数 | 说明 | 示例 |
+  | ---- | ---- | ---- |
+  | all | 查询所有，返回列表，没有则空列表 | Table.query.all() |
+  | get(id) | id查询，返回一个对象，没有返回None | table = Table.query.get(1) |
+  | filter | 过滤筛选，不支持组合查询，全局查询，参数需要指定表名 |  Table.query.filter(Table.age <= 14).filter(Table.name=aaa).all() |
+  | filter_by | 过滤筛选，支持组合查询,表内查询，参数可以直接用属性 |  Table.query.filter_by(age=16, name=aaa).all() |
+  | like | 模糊查询 （%匹配0或多个，_ 匹配一个） |  Table.query.filter(Table.name.like("%李%")).all() |
+  | order_by | 排序 |  Table.query.filter(Table.name.like("%李%")).order_by(Table.name.desc()).all() |
+  | offset|limit | 查询起始位置，以下标进行偏移|返回的条数 |  Table.query.filter(Table.name.like("%李%")).order_by(Table.name.desc()).offset(offset).limit(page_size).all().all() |
+  | count | 统计查询的条数 |  Table.query.count() |
++ 请求到返回过程
+  1. 客户端-----> wsgi server，__call__调用 wsgi_app
+  2. wsgi_app-----> requests对象和上下文环境
+  3. dispatch_requests-----> 进行url到view转发获取返回值
+  4. make_response函数-----> 将返回值转成response_class对象
+  4. response对象传入environ和start_response参数-----> 服务器
 ## 2. django
 ## 3. spring boot
