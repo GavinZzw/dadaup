@@ -1270,6 +1270,98 @@
             get_path_num(root)
             return self.ret
     ```
+  + 动态规划
+    + 最小路径和
+    ```
+    def uniquePaths(arr):
+        """
+        从左上角走到右下角最小路径
+        :param arr = [
+          [1,3,1],
+          [1,5,1],
+          [4,2,1]
+        ]
+        :return:
+        """
+        # 定义数组元素：从左上角走到(i, j) 这个位置时，最小的路径和是 dp[i][j]
+        n = len(arr)
+        if n == 0:
+            return 0
+        m = len(arr[0])
+    
+        if m == 0:
+            return 0
+        # 初始化dp
+        dp = [[0] * m for _ in range(n)]
+        for i in range(n):
+            for j in range(m):
+                # 确定边界和各节点状态转移方程
+                if j == 0 and j == 0:
+                    dp[i][j] = arr[i][j]
+                elif j == 0:
+                    dp[i][j] = dp[i - 1][j] + arr[i][j]
+                elif i == 0:
+                    dp[i][j] = dp[i][j - 1] + arr[i][j]
+                else:
+                    dp[i][j] = min(dp[i][j - 1], dp[i - 1][j]) + arr[i][j]
+        return dp[-1][-1]
+    ```
+    + 编辑距离
+    ```
+    def minEditCost(self, str1: str, str2: str, ic: int, dc: int, rc: int) -> int:
+        """
+        给定两个字符串str1和str2，再给定三个整数ic，dc和rc，分别代表插入、删除和替换一个字符的代价，请输出将str1编辑成str2的最小代价。
+        """
+        # 定义数组元素的含义:dp[i][j]的含义为：当字符串word1的长度为i,字符串word2的长度为j 时，将word1转化为word2所使用的最少操作次数为 dp[i][j]
+        # 定义dp
+        dp = [[0] * (len(str1) + 1) for _ in range(len(str2) + 1)]
+        for i in range(len(str2) + 1):
+            for j in range(len(str1) + 1):
+                if i == 0 and j == 0:
+                    continue
+                elif i == 0:
+                    dp[i][j] = dp[i][j - 1] + dc
+                elif j == 0:
+                    dp[i][j] = dp[i - 1][j] + ic
+                elif str1[j - 1] == str2[i - 1]:
+                    dp[i][j] = dp[i - 1][j - 1]
+                else:
+                    # 状态转移方程
+                    dp[i][j] = min(dp[i - 1][j - 1] + rc, dp[i][j - 1] + dc, dp[i - 1][j] + ic)
+        return dp[-1][-1]
+    ```
+    + 买卖股票最大利润
+    ```
+    有一个数组prices，长度为n，其中prices[i]是股票在第i天的价格，总共只能买入和卖出一次，且买入必须在卖出的前面的某一天，求最大利润
+     
+    class Solution:  # 使用一次遍历
+        def maxProfit(self , prices):
+            ret = 0
+            min_prices = None
+    
+            for price in prices:
+                if min_prices is None:
+                    min_prices = price
+                min_prices = min(min_prices, price)
+                ret = max(price-min_prices, ret)
+            return ret
+    ```
+    + 连续子数组的最大和
+    ```    
+    class Solution:
+        def FindGreatestSumOfSubArray(self, array) -> int:
+            if not array:
+                return 0
+            max_ret = array[0]
+            # 只保存当前连续的，不需要dp保存全部
+            cur_sum = 0
+            for item in array:
+                cur_sum += item
+                max_ret = max(max_ret, cur_sum)
+                if cur_sum < 0:
+                    cur_sum = 0
+            return max_ret
+    ```
 # 开发框架
 ## 1. flask
 + 项目结构
@@ -1422,4 +1514,32 @@
   4. make_response函数-----> 将返回值转成response_class对象
   4. response对象传入environ和start_response参数-----> 服务器
 ## 2. django
++ 目录结构
+    ```
+    建立django项目：django-admin startproject mysite
+    创建一个app:python manage.py startapp polls
+    mysite/  
+    manage.py  管理Django的交互脚本
+    polls/
+        __init__.py
+        admin.py  后台用户配置
+        apps.py  定义app
+        migrations/ 数据库迁移文件
+            __init__.py
+        models.py 数据库模型定义
+        tests.py
+        views.py 视图处理
+    mysite/
+        __init__.py
+        settings.py 项目的配置文件。
+        urls.py 路由文件
+        wsgi.py 一个基于WSGI的web服务器进入点，提供底层的网络通信功能
+    ```
++ ORM和querySet
++ uWSGI和nginx
++ restful
++ celery
++ session
++ 生命周期
++ 请求处理流程
 ## 3. spring boot
