@@ -1536,10 +1536,199 @@
         wsgi.py 一个基于WSGI的web服务器进入点，提供底层的网络通信功能
     ```
 + ORM和querySet
-+ uWSGI和nginx
-+ restful
+    
+     ```
+    Entry.objects.all()   查询全部
+    Entry.objects.get(pk=1)   查询pk为1的
+    
+    filter(**kwargs)：返回一个根据指定参数查询出来的QuerySet
+    exclude(**kwargs)：返回除了根据指定参数查询出来结果的QuerySet
+    
+    Entry.objects.get(headline__contains='Lennon') 查询标题包含Lennon,区分大小写
+    ```
+    每次查询出来的QuerySet返回的都是一个QuerySet，只有在必须返回具体结果时才查询数据库。
+    数据库执行实际的查询操作后会将数据缓存在这个QuerySet中.
+    
+    | 参数 | 说明 |
+    | ---- | ---- | 
+    | exact | 精确匹配 | 
+    | iexact | 不区分大小写的精确匹配 | 
+    | contains | 包含匹配 | 
+    | icontains | 不区分大小写的包含匹配 | 
+    | in | 在..之内的匹配 | 
+    | gte | 大于等于 | 
+    | startswith | 开头 | 
+    | regex | 区分大小写的正则匹配 | 
+    F表达式：获取模型字段的值，可以用于比较或者模型字段值修改后比较
+    ```
+    Entry.objects.filter(comments__gt=F('pingbacks')) comments值等于pingbacks值的列
+    Entry.objects.filter(authors__name=F('blog__name')) 跨表
+    Entry.objects.filter(mod_date__gt=F('pub_date') + timedelta(days=3)) 加值后比较
+    ```
+    Q表达式：Q用于封装关键字参数的集合，可以实现or逻辑。可以使用&或者|或~来组合Q对象，分别表示与、或、非逻辑。它将返回一个新的Q对象。
+    ```
+    Poll.objects.get(Q(question__startswith='Who'), Q(pub_date=date(2005, 5, 2)) | Q(pub_date=date(2005, 5, 6)))
+    Poll.objects.get(Q(pub_date=date(2005, 5, 2)) | Q(pub_date=date(2005, 5, 6)), question__startswith='Who') 当关键字参数和Q对象组合使用时，Q对象必须放在前面
+    ```    
++ restful:django使用rest-framework
+  + 序列化：请求数据和模型数据转换
+    + ModelSerializers：json对象和模型对象转换
+    + HyperlinkedModelSerializer：使用超链接来表示关系而不是主键
+    ```
+    from .models import Student
+    from rest_framework import serializers
+        
+    class StudentSerializer(serializers.HyperlinkedModelSerializer):
+        class Meta:
+            model = Student
+            fields = ('id', 'name', 'age', 'group')
+    ```
+  + 视图：
+    + 可以自己实现各种请求函数
+    ```
+    def article_list(request):
+        if request.method == 'GET':
+            articles = Article.objects.all()
+            serializer = ArticleSerializer(articles, many=True)
+            return JSONResponse(serializer.data)
+    
+        elif request.method == 'POST':
+            data = JSONParser().parse(request)
+            serializer = ArticleSerializer(data=data)
+            if serializer.is_valid():
+                serializer.save()
+                return JSONResponse(serializer.data, status=201)
+            return JSONResponse(serializer.errors, status=400)
+    ```  
+    + 可以继承APIView使用类视图
+    ```
+    class UserDetail(APIView):
+        def get_user(self, id):
+            try:
+                user = User.objects.get(id=id)
+                return user
+            except User.DoesNotExist:
+                raise Http404
+    
+        def get(self, request, *args, **kwargs):
+            user = self.get_user(kwargs.get('id'))
+            serializer = UserSerializer(user, context={'request': request})
+            return Response(serializer.data)
+    
+        def put(self, request, *args, **kwargs):
+            user = self.get_user(kwargs.get('id'))
+            serializer = UserSerializer(user, data=request.data, context={'request': request})
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+        def detete(self, request, *args, **kwargs):
+            user = self.get_user(kwargs.get('id'))
+            user.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+    ```   
+    + 可以直接用viewsets的ModelViewSet，自动生成增删改查
+    ```
+    from .models import Student
+    from rest_framework import viewsets
+    from .serializers import StudentSerializer
+    
+    class StudentViewSet(viewsets.ModelViewSet):
+        queryset = Student.objects.all()
+        serializer_class = StudentSerializer
+    ```
+  + 路由：
+    + 自定义和映射：
+    ```
+    game_list = views.GameView.as_view({
+        'get': 'list',
+        'post': 'create'
+    })
+    game_detail = views.GameView.as_view({
+        'get': 'retrieve',
+        'put': 'update',
+        'patch': 'partial_update',
+        'delete': 'destroy'
+    })
+    
+     path('games/', game_list, name='game-list'),  # 获取或创建
+     path('games/<int:pk>/', game_detail, name='game-detail'),  # 查找、更新、删除
+    ```
+    + Router类自动生成路由
+    ```
+    from rest_framework.routers import DefaultRouter
+    
+    # 创建路由器并注册我们的视图。
+    router = DefaultRouter()
+    router.register('games', views.GameView)
+    
+    path('', include(router.urls)),
+    ```
+  + 筛选：
+    + 过滤：
+    ```
+    class GameView(CustomModelViewSet):
+        queryset = Game.objects.all()
+        serializer_class = GameSerializer
+        filter_backends = (DjangoFilterBackend,)
+        filter_fields = ('name', 'status')  直接设置支持筛选的字段，但是可能有限制，需要自定义筛选类
+        
+    自定义筛选类
+    from django_filters import rest_framework as filters
+    class GameFilter(filters.FilterSet):
+        min_status = filters.NumberFilter(field_name='status', lookup_expr='gte')
+        max_status = filters.NumberFilter(field_name='status', lookup_expr='lte')
+        #根据名字过滤忽略大小写
+        name = filters.CharFilter(field_name='name', lookup_expr='icontains')
+    
+        class Meta:
+            model = Game
+            fields = ('min_status', 'max_status')  # 允许精准查询的字段
+            search_fields = ('name',)  # 允许模糊查询的字段
+            
+    class GameView(CustomModelViewSet):
+        queryset = Game.objects.all()
+        serializer_class = GameSerializer
+    
+        filter_backends = (DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter)
+        # filter_fields = ('name', 'status') 
+        filterset_class = GameFilter 视图中直接使用
+        # 搜索
+        search_fields = ("name", "status")
+        #排序
+        ordering_fields = ['status', "id", "name"]
+    ```      
 + celery
+  1. setting中配置CELERY_BROKER_URL参数
+  2. setting中配置CELERY_QUEUES、CELERY_ROUTES、CELERYBEAT_SCHEDULE等参数
+  3. 定义异步任务使用@app.task(queue='async_apis')装饰器 def task1(*args, **kargs)
+  4. 在接口中使用：task1.delay(*args, **kargs)
 + session
+  1. setting 中配置过期时间，保存为数据库/缓存/文件等等
+  2. request.session：session类似字典，可以通过key，也可以get,delete.
++ 中间件
+  1. setting MIDDLEWARE 中添加
+  2. 定义中间件，类继承MiddlewareMixin    
+  process_request(self,request)  视图函数之前执行  
+  process_view(self, request, view_func, view_args, view_kwargs)  视图函数之前，process_request之后  
+  process_exception(self, request, exception)  视图函数中出现异常了才执行，按照 settings 的注册倒序执行  
+  process_response(self, request, response)  视图函数之后执行
 + 生命周期
-+ 请求处理流程
+  1. uWSGI处理：监听到端口消息将http转为WSGI,封装request等
+  2. WSGIHandler处理:加载django的settings，控制整个请求过程
+  3. middleware中间件处理：process_request
+  4. url路由匹配
+  5. middleware中间件处理：process_view方法预处理
+  6. views处理request，model->数据库
+  7. middleware中间件处理：process_response
+  8. WSGIHandler处理:获取到response后调用 start_response 返回http协议的 响应行和响应头 到uWSGI
+  9. uWSGI处理:response内容包装成http协议的内容后，通过uwsgi协议返回
 ## 3. spring boot
+  + Maven
+  + mvc&项目结构
+  + MyBatis
+  + Swagger
+  + 定时任务
+  + 部署
+  
