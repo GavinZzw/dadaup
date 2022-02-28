@@ -630,11 +630,14 @@
         ```    
     + 分支
         ```
-        git reset HEAD^ #恢复到上次提交的版本
-        git reset HEAD^^ #恢复到上上次提交的版本，或者~n，恢复到前n次
-        git reset --hard commit号 #恢复到指定版本
-        git revert HEAD #撤销最近一次提交
-        git revert commit号 #撤销某次commit
+        git checkout [-b] 分支 #【创建并切】换到分支
+        git branch #查看分支
+        git branch -d #删除分支，-D强制删除
+        
+        git仓库过大，git clone --depth=1 可以拉去一个分支，之后每次拉去一个分支可以使用：
+            $ git remote set-branches origin remote_branch_name  设置一个远端分支管理
+            $ git fetch origin remote_branch_name   拉取远端分支
+            $ git checkout remote_branch_name  切换分支
         ```
     + merge和rebase：
        + rebase：变基，在当前分支rebase开发分支，相当于把当前分支的修改依次放在了开发分支后面，整个开发分支是一条线；但是rebase后没法追踪是从按个提交拉出来的
