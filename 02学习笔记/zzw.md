@@ -1725,10 +1725,125 @@
   8. WSGIHandler处理:获取到response后调用 start_response 返回http协议的 响应行和响应头 到uWSGI
   9. uWSGI处理:response内容包装成http协议的内容后，通过uwsgi协议返回
 ## 3. spring boot
-  + Maven
-  + mvc&项目结构
-  + MyBatis
-  + Swagger
-  + 定时任务
-  + 部署
-  
+  + 项目结构
+    ```
+    web/
+        src/ 源码文件
+            main/
+                assembly/ maven 使用assembly打包的相关文件
+                java/
+                    com.***.web/ 项目代码目录
+                        constan/ 常量配置
+                        controller/ 表示层，web层，DTO转VO对象，主要是对访问控制进行转发，各类基本参数校验，或者不复用的业务简单处理等。
+                        dao/ 数据访问层，与底层MySQL、Oracle、Hbase等进行数据交互，返回DO对象，此对象与数据库表结构一一对应
+                        domain/ 实体类，定义各种对象如DTO，DO，VO等
+                        mapper/ mapper接口，
+                        mapping/ 实现mapper接口的mybatis xml配置文件
+                        service/ 业务逻辑层，DO返回DTO
+                        util/ 一些通用方法等
+                        WebApplication  启动类文件
+                resources/ 资源配置，环境变量等
+            test/ 测试代码       
+        target/ 编辑生成文件
+        pom.xml  项目依赖管理  
+    ```
+  + Maven：项目管理工具，可以对 Java 项目进行构建、依赖管理
+    + POM：POM文件是一个xml文件，是maven管理的基本工作单元，结构如下：
+        ```
+        <project xmlns = "http://maven.apache.org/POM/4.0.0"
+            xmlns:xsi = "http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation = "http://maven.apache.org/POM/4.0.0
+            http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         
+            <!-- 模型版本 -->
+            <modelVersion>4.0.0</modelVersion>
+            <!-- 公司或者组织的唯一标志，并且配置时生成的路径也是由此生成， 如com.companyname.project-group，maven会将该项目打成的jar包放本地路径：/com/companyname/project-group -->
+            <groupId>com.companyname.project-group</groupId>
+         
+            <!-- 项目的唯一ID，一个groupId下面可能多个项目，就是靠artifactId来区分的 -->
+            <artifactId>project</artifactId>
+         
+            <!-- 版本号 -->
+            <version>1.0</version>
+        </project>
+        ```
+    + 构建生命周期：  
+        1. clean（项目清理的处理）  
+          pre-clean：执行一些需要在clean之前完成的工作  
+          clean：移除所有上一次构建生成的文件
+          post-clean：执行一些需要在clean之后立刻完成的工作
+        2. Default (Build) 生命周期  
+          validate（校验）、initialize（初始化）、generate-sources（生成源代码）、...compile（编译）、...、test（测试）、...package（打包）、...verify （验证）、install（安装）、deploy（部署）  
+        3. Site 生命周期：一般用来创建新的报告文档、部署站点等
+          pre-site：执行一些需要在生成站点文档之前完成的工作  
+          site：生成项目的站点文档
+          post-site： 执行一些需要在生成站点文档之后完成的工作，并且为部署做准备
+          site-deploy：将生成的站点文档部署到特定的服务器上
+    + 命令：格式为 mvn [plugin-name]:[goal-name] 会执行plugin-name所在周期前面所有plugin直到plugin-name，如mvn clean package 先执行clean生命周到,并运行到clean这个phase;接着运行default生命周期,并运行到package。  
+    -D 指定参数，如 -Dmaven.test.skip=true 跳过单元测试；  
+    -P 指定 Profile 配置，可以用于区分环境；  
+    -e 显示maven运行出错的信息；  
+    -o 离线执行命令,即不去远程仓库更新包；  
+    -X 显示maven允许的debug信息；  
+    -U 强制去远程更新snapshot的插件或依赖，默认每天只更新一次  
+      ```
+        命令 描述
+        mvn –version 显示版本信息
+        mvn clean 清理项目生产的临时文件,一般是模块下的target目录
+        mvn compile 编译源代码，一般编译模块下的src/main/java目录
+        mvn package 项目打包工具,会在模块下的target目录生成jar或war等文件
+        mvn test 测试命令,或执行src/test/java/下junit的测试用例.
+        mvn install 将打包的jar/war文件复制到你的本地仓库中,供其他模块使用
+        mvn deploy 将打包的文件发布到远程参考,提供其他人员进行下载依赖
+        mvn site 生成项目相关信息的网站
+        mvn eclipse:eclipse 将项目转化为Eclipse项目
+        mvn dependency:tree 打印出项目的整个依赖树
+        mvn archetype:generate 创建Maven的普通java项目
+        mvn tomcat:run 在tomcat容器中运行web应用
+        mvn jetty:run 调用 Jetty 插件的 Run 目标在 Jetty Servlet 容器中启动 web 应用
+      ```
+  + MyBatis：半自动ORM，java的持久层框架，它内部封装了jdbc，使开发者只需要关注sql语句本身，而不需要花费精力去处理加载驱动、创建连接、创建statement等繁杂的过程。  
+    1. 引入maven依赖
+    2. 增加yml配置：指定mapper文件等
+    3. 定义mapper.xml文件，写sql获取数据
+    4. 定义dao层，与mapper方法和返回参数对应
+    5. service中调用获取数据
+  + 常用注解：
+    + 项目配置层：  
+    1、@SpringBootApplication：复合注解，包含了@SpringBootConfiguration，@EnableAutoConfiguration，@ComponentScan这三个注解。  
+        @SpringBootConfiguration:标注当前类是配置类，这个注解继承自@Configuration。并会将当前类内声明的一个或多个以@Bean注解标记的方法的实例纳入到srping容器中，并且实例名就是方法名。  
+        @EnableAutoConfiguration:是自动配置的注解，这个注解会根据我们添加的组件jar来完成一些默认配置，我们做微服时会添加spring-boot-starter-web这个组件jar的pom依赖，这样配置会默认配置springmvc 和tomcat。  
+        @ComponentScan:扫描当前包及其子包下被@Component，@Controller，@Service，@Repository注解标记的类并纳入到spring容器中进行管理。等价于<context:component-scan>的xml配置文件中的配置项。  
+    2、@ServletComponentScan:Servlet、Filter、Listener 可以直接通过 @WebServlet、@WebFilter、@WebListener 注解自动注册，这样通过注解servlet ，拦截器，监听器的功能而无需其他配置
+    3、@MapperScan:spring-boot支持mybatis组件的一个注解，通过此注解指定mybatis接口类的路径，即可完成对mybatis接口的扫描，和mapper一样@mapper需要加在每一个mapper接口类上面。
+    4、@import注解是一个可以将普通类导入到spring容器中做管理
+    + controller层：  
+    1、@Controller:处理http请求，用于标记这个类是⼀一个控制器器，返回⻚面的时候使用;如果要返回JSON,则需 要在接口上使用@ResponseBody才可以  
+    2、@RestController:Spring4之后添加，返回json，@RestController = @Controller+@ResponseBody
+    3、@RequestMapping:配置URL映射用于类上做1级路径，最新可以使用getMapping('/api')；@GetMapping = @RequestMapping(method = RequestMethod.GET)  
+    4、@GetMapping(value =“”) = @RequestMapping(value=“”,method = RequestMethod.GET)  
+    5、@Autowired：对象的创建交给了Spring容器，是spring的自动装配。
+    + servcie层  
+    1、@Service：这个注解用来标记业务层的组件  
+    2、@Override：检测方法覆写的正确性
+    + 持久层：  
+    1、@Repository：注解类作为DAO对象，管理操作数据库的对象。  
+    2、@JsonIgnore：指定字段不不返回  
+    3、@Data：自动添加getset，equals()、hashCode()、toString()
+  + Swagger：通过注解可以生成接口说明文档，作用  
+    1、将项目中所有的接口展现在页面上，这样后端程序员就不需要专门为前端使用者编写专门的接口文档；  
+    2、接口更新之后，只需要修改代码中的 Swagger 描述就可以实时生成新的接口文档了，从而规避了接口文档老旧不能使用的问题；   
+    3、Swagger页面，可以直接进行接口调用，降低了项目开发阶段的调试成本。   
+  + 定时任务：
+    ```
+    @Scheduled
+    如：@Scheduled(cron = "0 0 */1 * * ?")
+    cron：cron表达式，指定任务在特定时间执行； 
+    fixedDelay：表示上一次任务执行完成后多久再次执行，参数类型为long，单位ms； 
+    fixedDelayString：与fixedDelay含义一样，只是参数类型变为String； 
+    fixedRate：表示按一定的频率执行任务，参数类型为long，单位ms； 
+    fixedRateString: 与fixedRate的含义一样，只是将参数类型变为String； 
+    initialDelay：表示延迟多久再第一次执行任务，参数类型为long，单位ms； 
+    initialDelayString：与initialDelay的含义一样，只是将参数类型变为String； 
+    zone：时区，默认为当前时区，一般没有用到。
+    ```
