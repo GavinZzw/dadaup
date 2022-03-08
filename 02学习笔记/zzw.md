@@ -727,7 +727,7 @@
             image: es  //使用的镜像名
             environment:  //容器环境变量设置
               - "ES_JAVA_OPTS=-Xms32G -Xmx32G"
-              - cluster.name=aisa_es_cluster
+              - cluster.name=es_cluster
               - bootstrap.memory_lock=true
               - xpack.security.transport.ssl.enabled=true
               - xpack.security.enabled=true
@@ -742,7 +742,7 @@
                 hard: 655360
             volumes:  //目录挂在
               - /data/es:/usr/share/elasticsearch/data
-              - /opt/work/nta/lib/log4j-core-2.11.1.jar:/usr/share/elasticsearch/lib/log4j-core-2.11.1.jar
+              - /lib/log4j-core-2.11.1.jar:/usr/share/elasticsearch/lib/log4j-core-2.11.1.jar
             networks:  //网络配置
               - net
             ports:  //端口映射
@@ -810,8 +810,8 @@
             set $outdated N;  
         
             ssl_protocols TLSv1.2; #协议版本
-            ssl_certificate "/etc/nginx/ssl/aisa/server.crt"; 证书路径，包含公钥
-            ssl_certificate_key "/etc/nginx/ssl/aisa/server.key"; 私钥路径
+            ssl_certificate "/etc/nginx/ssl/server.crt"; 证书路径，包含公钥
+            ssl_certificate_key "/etc/nginx/ssl/server.key"; 私钥路径
             ssl_session_cache shared:SSL:1m; #储存SSL会话的缓存类型和大小
             ssl_session_timeout  10m; #会话过期时间
             ssl_ciphers HIGH:!aNULL:!MD5; #选择的加密套件，前面叹号的是废弃的
@@ -861,9 +861,9 @@
     + select（水平触发）:fd_r_list, fd_w_list, fd_e_list = select.select(rlist(等待读), wlist（等待写）, xlist（等待异常）, [timeout])
         select函数会阻塞，直到rlist中的套接字被触发  
         优点：占用资源少，同时能监听多个客户端  
-        缺点：当等待读的数据多时，select接口需要大量时间去轮询各个句柄
-    + poll机制（水平触发）： Linux    #和lselect监听机制一样，但是对监听列表里面的数量没有限制，select默认限制是1024个，但是他们两个都是操作系统轮询每一个被监听的文件描述符（如果数量很大，其实效率不太好），看是否有可读操作。
-    + epoll机制（水平触发-默认，边缘触发）： Linux    #它的监听机制和上面两个不同，他给每一个监听的对象绑定了一个回调函数，你这个对象有消息，那么触发回调函数给用户，用户就进行系统调用来拷贝数据，并不是轮询监听所有的被监听对象，这样的效率高很多。  
+        缺点：保存文件描述符的fd_set结构体的定义实际包含的是fds_bits位数组，当前系统大小1024，当等待读的数据多时，select接口需要大量时间去轮询各个句柄
+    + poll机制（水平触发）： select监听机制一样，但是对监听列表里面的数量没有限制（链表），select默认限制是1024个，但是他们两个都是操作系统轮询每一个被监听的文件描述符（如果数量很大，其实效率不太好），看是否有可读操作。
+    + epoll机制（水平触发-默认，边缘触发）： 也没有监听数量限制（使用红黑树），它的监听机制和上面两个不同，他给每一个监听的对象绑定了一个回调函数，你这个对象有消息，那么触发回调函数给用户，用户就进行系统调用来拷贝数据，并不是轮询监听所有的被监听对象，这样的效率高很多。  
     水平触发：epoll中当监听的文件描述符有读写事件发生时，会通知处理程序。如果处理程序没有处理完，下次还会通知你接着上次进度处理。如果这个读写事件自己不关心，它们会每次都通知。  
     边缘触发：epoll中当监听的文件描述符有读写事件发生时，会通知处理程序。只会通知一次，直到下次产生新的读写事件。
 ## 2. 常用命令
@@ -909,6 +909,24 @@
         -n 是显示行号
         -R 查找所有文件包含子目录
         -i 忽略大小写
+        -v 反向查找，排除
+        # grep '20:[1-5][0-9]:' *.log  匹配当前目录下搜索log日志中，20点的日志
+        # grep '20:[1-5][0-9]:' 1.log 2.log  指定文件中查找
+        
+    find   path   -option   [   -print ]   [ -exec   -ok   command ]   {} \;
+    # find /home/midou/logs// -mtime +30 -name "*.log.gz" -exec rm -rf {} \; 删除30天前满足格式的文件
+        -print find命令将匹配的文件输出到标准输出。
+        -name 按照文件名查找文件。
+        -perm  按照文件权限来查找文件。
+        -prune 使用这一选项可以使find命令不在当前指定的目录中查找。
+        -user  按照文件属主来查找文件。
+        -mtime -n +n 按照文件的更改时间来查找文件， - n表示文件更改时间距现在n天以内，+ n表示文件更改时间距现在n天以前。
+        -mmin n  查找系统中最后N分钟被改变文件数据的文件
+        -ctime n 查找系统中最后n*24小时被改变文件状态的文件
+        -cmin n  查找系统中最后N分钟被改变文件状态的文件
+        -atime n 查找系统中最后n*24小时访问的文件
+        -amin n  查找系统中最后N分钟访问的文件
+        -size n：[c] 查找文件长度为n块的文件，带有c时表示文件长度以字节计。-depth：在查找文件时，首先查找当前目录中的文件，然后再在其子目录中查找。
     ```
   + 目录结构
     ```
@@ -976,6 +994,14 @@
         ```
   + 网络管理
     ```
+    netstat:查询网络信息
+        -a 所有信息
+        -t：只查询显示tcp进程
+        -u：只查询显示udp进程
+        -n：将别名转化为数字，结果中将全部显示端口号
+        -l：只显示监听中的服务状态
+        -p：显示端口相关的应用进程名称
+        
     ifconfig：查看网络信息
     配置静态路由：
     sudo ip route add 192.168.55.20/32 via 192.168.27.1 dev eth0
