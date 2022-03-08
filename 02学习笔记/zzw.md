@@ -727,7 +727,7 @@
             image: es  //使用的镜像名
             environment:  //容器环境变量设置
               - "ES_JAVA_OPTS=-Xms32G -Xmx32G"
-              - cluster.name=aisa_es_cluster
+              - cluster.name=es_cluster
               - bootstrap.memory_lock=true
               - xpack.security.transport.ssl.enabled=true
               - xpack.security.enabled=true
@@ -742,7 +742,7 @@
                 hard: 655360
             volumes:  //目录挂在
               - /data/es:/usr/share/elasticsearch/data
-              - /opt/work/nta/lib/log4j-core-2.11.1.jar:/usr/share/elasticsearch/lib/log4j-core-2.11.1.jar
+              - /lib/log4j-core-2.11.1.jar:/usr/share/elasticsearch/lib/log4j-core-2.11.1.jar
             networks:  //网络配置
               - net
             ports:  //端口映射
@@ -810,8 +810,8 @@
             set $outdated N;  
         
             ssl_protocols TLSv1.2; #协议版本
-            ssl_certificate "/etc/nginx/ssl/aisa/server.crt"; 证书路径，包含公钥
-            ssl_certificate_key "/etc/nginx/ssl/aisa/server.key"; 私钥路径
+            ssl_certificate "/etc/nginx/ssl/server.crt"; 证书路径，包含公钥
+            ssl_certificate_key "/etc/nginx/ssl/server.key"; 私钥路径
             ssl_session_cache shared:SSL:1m; #储存SSL会话的缓存类型和大小
             ssl_session_timeout  10m; #会话过期时间
             ssl_ciphers HIGH:!aNULL:!MD5; #选择的加密套件，前面叹号的是废弃的
