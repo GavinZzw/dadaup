@@ -630,7 +630,7 @@
         | Accept-Ranges | 是否接受字节范围请求， |
         | Content-Encoding | 内容编码gzip |
         | Content-Type | 内容类型application/json |
-        | Set-Cookie | 设置得cookie |
+        | Set-Cookie | 设置的cookie |
         | Server | HTTP 服务器的安装信息，nginx |
   + cookie、session和token  
     1. cookie:浏览器的一种功能，cookie能帮助web站点保存信息。服务端设置，客户端每次请求会带着服务器保存的cookie,其中包括了key,value,过期时间,路径和域。
@@ -730,7 +730,7 @@
             $ git checkout remote_branch_name  切换分支
         ```
     + merge和rebase：
-       + rebase：变基，在当前分支rebase开发分支，相当于把当前分支的修改依次放在了开发分支后面，整个开发分支是一条线；但是rebase后没法追踪是从按个提交拉出来的
+       + rebase：变基，在当前分支rebase开发分支，相当于把当前分支的修改依次放在了开发分支后面，整个开发分支是一条线；但是rebase后没法追踪是从那个提交后拉出来的
        + merge：合并，在开发分支merge自己分支，相当于将开发分支的修改和自己的修改再生成一次commit记录，然后让开发分支指向最新的这个提交
 ## 2. docker
   + 基础：
@@ -802,7 +802,6 @@
                 hard: 655360
             volumes:  //目录挂在
               - /data/es:/usr/share/elasticsearch/data
-              - /lib/log4j-core-2.11.1.jar:/usr/share/elasticsearch/lib/log4j-core-2.11.1.jar
             networks:  //网络配置
               - net
             ports:  //端口映射
@@ -1392,7 +1391,11 @@
             return self.ret
     ```
   + 二分查找
-  + 
+  + 双指针
+  + 滑动窗口
+  + 广度深度搜索
+  + 回溯
+  + 贪心
   + 动态规划
     + 最小路径和
     ```
